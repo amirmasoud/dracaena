@@ -12,4 +12,4 @@ Scrapy (`pip install scrapy`)
 scarpy crawl hafez -o hafez # Scrapy commands
 ```
 
-### Written by [Amirmasoud Sheydaei](https://www.google.com)
+###### Written by [Amirmasoud Sheydaei](https://www.blog.amirmasoud.net)
