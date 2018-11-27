@@ -1,6 +1,4 @@
 .DS_Store
-# Crawled jsons
-*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
