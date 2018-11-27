@@ -1,45 +1,74 @@
 # -*- coding: utf-8 -*-
 import json, scrapy, sys, os, errno, re
+from scrapy.spiders import CrawlSpider, Rule
+from scrapy.linkextractors import LinkExtractor
+from scrapy.linkextractors.sgml import SgmlLinkExtractor
+
 reload(sys)
 sys.setdefaultencoding('utf8')
 
-class GanjoorBooks(scrapy.Spider):
-    name = 'ganjoorbooks'
-    start_urls = ['https://ganjoor.net']
-    debug = True
+class testSpider(CrawlSpider):
+    name = "test"
+    bot_name = 'test'
+    allowed_domains = ["ganjoor.net"]
+    start_urls = ["https://ganjoor.net/"]
+    rules = (
+        Rule(SgmlLinkExtractor(allow_domains=()), callback='parse_content',process_links="filter_links",follow= True),
+    )
+    custom_settings = {
+        'LOG_LEVEL': 'INFO'
+    }
+    exclude = ['/vazn','?comments_popup=','/bp/','/?v=','blog.ganjoor.net/','i.ganjoor.net/','http://ganjoor.net/contact/', '/report/']
+    author_links = list()
 
-    def parse(self, response):
-        with open('books.json') as f:
-            books = json.load(f)
-        for book in books:
-            content = scrapy.Request(book['link'], callback=self.parseContent)
-            content.meta['book_link'] = book['link']
-            print content
-            yield content
+    def __init__(self, *a, **kw):
+        super(testSpider, self).__init__(*a, **kw)
+        with open('authors.json') as f:
+            authors = json.load(f)
+        for author in authors:
+            self.author_links.append(author['link'])
 
-    def parseContent(self, response):
-        item_link = response.meta['book_link']
+    def filter_links(self, links):
+        for link in links:
+            if self.filter(link.url):
+                continue
+            yield link
+
+        # for link in links:
+        #     if self.filter(link.url):
+        #         pass
+
+            # if not any(author in link.url for author in self.author_links):
+            #     # or not re.search('https://ganjoor.net/([a-zA-Z0-9]+/?)', link.url):
+            #     pass
+
+        # return links
+
+    def filter(self, url):
+        for author_link in self.author_links:
+            if url.startswith(author_link):
+                return False
+        return True
+
+
+    def parse_content(self, response):
+        print response.request.url
 
         # Reach data
         # if not response.css('div.poem p.b').extract_first():
-        if not re.search('https://ganjoor.net/([a-zA-Z0-9]+/)+(sh[0-9]+)/?', item_link):
-            for i, item in enumerate(response.css("div.poem>article a")):
-                if str(item.css('::attr(href)').extract_first()).startswith(item_link) and len(item.css('::attr(href)').extract_first()) > len(item_link):
-                    nextLevel = scrapy.Request(item.css('::attr(href)').extract_first(), callback=self.parseContent)
-                    nextLevel.meta['book_link'] = item.css('::attr(href)').extract_first()
-                    yield nextLevel
+        if re.search('https://ganjoor.net/([a-zA-Z0-9]+/)+(sh[0-9]+)/?', response.request.url):
 
-        # Crawl data
-        sh = self.getContent(response)
+            # Crawl data
+            sh = self.get_content(response)
 
-        # Save data
-        path = str('data/' + str(item_link.replace('https://ganjoor.net/', '')))
-        self.mkdir_p(path)
-        with open(path + 'output.json', 'w') as output:
-            print sh
-            json.dump(sh, output)
+            # Save data
+            path = str('data/' + str(response.request.url.replace('https://ganjoor.net/', '')))
+            self.mkdir_p(path)
 
-    def getContent(self, response):
+            with open(path + 'output.json', 'w') as output:
+                json.dump(sh, output)
+
+    def get_content(self, response):
         index = 0
         sh = dict()
         sh["text"] = dict()
@@ -79,31 +108,7 @@ class GanjoorBooks(scrapy.Spider):
             os.makedirs(path)
         except OSError as exc:
             if exc.errno == errno.EEXIST and os.path.isdir(path):
+                print 1
                 pass
             else:
-                print 'raise'
                 raise
-
-
-        # book_link = response.meta['book_link']
-        # sh = dict()
-        # index = 0
-        # if response.css('div.poem article div.b'):
-        #     for content in response.css('div.poem article div.b'):
-        #         b = {
-        #             'm1': content.css('div.m1>p::text').extract_first(),
-        #             'm2': content.css('div.m2>p::text').extract_first()
-        #         }
-        #         sh[index] = b
-        #         index = index + 1
-        #         yield b
-        # with open('test.json', 'w') as output:
-        #     json.dump(sh, output)
-        # for content in response.css('div.poem p'):
-        #     content_link = content.css('a::attr(href)').extract_first()
-        #     content_text = content.css('a::text').extract_first()
-        #     if content_text is not None and content_link.startswith(book_link) and len(content_link) > len(book_link):
-        #         yield {
-        #             'title': book.css('a::text').extract_first(),
-        #             'link': book.css('a::attr(href)').extract_first()
-        #         }
