@@ -22,7 +22,7 @@ class GanjoorBooks(scrapy.Spider):
 
         # Reach data
         # if not response.css('div.poem p.b').extract_first():
-        if not re.search('https://ganjoor.net/([a-zA-Z0-9]+/)+(sh[0-9]+)/?', item_link):
+        if not re.search('https://ganjoor.net/([a-zA-Z0-9]+/)+(sh[0-9]+|mosammat)/?', item_link):
             for i, item in enumerate(response.css("div.poem>article a")):
                 if str(item.css('::attr(href)').extract_first()).startswith(item_link) and len(item.css('::attr(href)').extract_first()) > len(item_link):
                     nextLevel = scrapy.Request(item.css('::attr(href)').extract_first(), callback=self.parseContent)
